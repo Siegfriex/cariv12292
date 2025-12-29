@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { 
@@ -62,7 +61,9 @@ import {
   Gauge,
   Armchair,
   Filter,
-  Timer
+  Timer,
+  ShoppingBag,
+  Megaphone
 } from "lucide-react";
 import { GoogleGenAI, Type } from "@google/genai";
 
@@ -82,6 +83,8 @@ type Screen =
   | 'SCR-0201' // Inspection Request
   | 'SCR-0201-Progress' // Inspection Status
   | 'SCR-0202' // Inspection Report
+  | 'SCR-0300' // Sales Method Selection
+  | 'SCR-0400' // Auction Detail
   ;
 
 interface Vehicle {
@@ -195,6 +198,13 @@ const MockDataService = {
       v.inspectionId = `insp-${Date.now()}`;
     }
     return new Promise(resolve => setTimeout(resolve, 1000));
+  },
+  startAuction: (vehicleId: string) => {
+    const v = MOCK_VEHICLES.find(v => v.id === vehicleId);
+    if (v) {
+      v.status = 'bidding';
+      v.endTime = '47:59:59'; // Mock countdown
+    }
   },
   getInspectionReport: (vehicleId: string): InspectionReport => ({
     id: "rpt-001",
@@ -579,9 +589,9 @@ const DashboardPage = ({ onNavigate }: any) => {
                         <Button 
                            variant={v.status === 'inspection' ? 'primary' : 'outline'} 
                            className="w-full h-9 text-sm"
-                           onClick={() => v.status === 'inspection' ? onNavigate('SCR-0201-Progress') : onNavigate('SCR-0202', v.id)}
+                           onClick={() => v.status === 'inspection' ? onNavigate('SCR-0201-Progress') : v.status === 'bidding' ? onNavigate('SCR-0400', v.id) : onNavigate('SCR-0202', v.id)}
                         >
-                           {v.status === 'inspection' ? '현황 보기' : '상세 보기'}
+                           {v.status === 'inspection' ? '현황 보기' : v.status === 'bidding' ? '경매 현황' : '상세 보기'}
                         </Button>
                      </div>
                   </div>
@@ -789,7 +799,8 @@ const RegisterVehiclePage = ({ onNavigate, editingVehicleId }: any) => {
           </div>
           <div className="flex gap-2">
              <Button variant="outline" onClick={() => onNavigate('SCR-0200-Draft')}>임시 저장</Button>
-             <Button onClick={() => onNavigate('SCR-0201', 'v-001')} icon={ChevronRight}>검차 요청</Button>
+             {/* Fixed: Use a valid ID from mock data (v-104 which is in 'inspection' status) instead of invalid 'v-001' to prevent white screen */}
+             <Button onClick={() => onNavigate('SCR-0201', 'v-104')} icon={ChevronRight}>검차 요청</Button>
           </div>
        </header>
 
@@ -1210,7 +1221,17 @@ const InspectionRequestPage = ({ onNavigate, vehicleId }: any) => {
     }
   };
 
-  if (!vehicle) return null;
+  // Fixed: Show loader instead of returning null to avoid white screen
+  if (!vehicle) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-fmax-surface">
+         <div className="flex flex-col items-center">
+            <Loader2 className="w-8 h-8 text-fmax-primary animate-spin mb-4" />
+            <p className="text-sm text-fmax-text-sub">차량 정보를 불러오는 중입니다...</p>
+         </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-fmax-surface flex flex-col">
@@ -1325,7 +1346,17 @@ const InspectionReportPage = ({ onNavigate, vehicleId }: any) => {
     }
   }, [vehicleId]);
 
-  if (!report) return null;
+  // Fixed: Show loader instead of returning null to avoid white screen
+  if (!report) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-fmax-surface">
+         <div className="flex flex-col items-center">
+            <Loader2 className="w-8 h-8 text-fmax-primary animate-spin mb-4" />
+            <p className="text-sm text-fmax-text-sub">리포트를 생성하는 중입니다...</p>
+         </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-fmax-surface flex flex-col">
@@ -1348,7 +1379,7 @@ const InspectionReportPage = ({ onNavigate, vehicleId }: any) => {
          </div>
        </header>
 
-       <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full space-y-8">
+       <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full space-y-8 pb-24">
           {/* AI Summary Card */}
           <div className="bg-white rounded-xl border border-fmax-primary/30 p-6 shadow-sm relative overflow-hidden">
              <div className="absolute top-0 right-0 p-4 opacity-10">
@@ -1457,6 +1488,204 @@ const InspectionReportPage = ({ onNavigate, vehicleId }: any) => {
              </div>
           </div>
        </main>
+
+       {/* Next Action Footer */}
+       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-fmax-border p-4 z-40">
+          <div className="max-w-6xl mx-auto flex items-center justify-between">
+             <div className="text-xs text-fmax-text-sub">
+                <span className="font-bold text-fmax-text-main">검차 완료</span> · 판매 방식을 선택하여 매물을 등록하세요.
+             </div>
+             <Button className="h-11 px-8" icon={ArrowRight} onClick={() => onNavigate('SCR-0300', vehicleId)}>판매 방식 선택</Button>
+          </div>
+       </div>
+    </div>
+  );
+};
+
+// --- SCR-0300: Sales Method Selection Page ---
+const SalesMethodPage = ({ onNavigate, vehicleId }: any) => {
+  return (
+    <div className="min-h-screen bg-fmax-surface flex flex-col">
+       <header className="bg-white border-b border-fmax-border px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-4 sticky top-0 z-30">
+          <button onClick={() => onNavigate('SCR-0202', vehicleId)} className="p-2 hover:bg-fmax-surface rounded-lg transition-colors">
+            <ArrowLeft className="w-5 h-5 text-fmax-text-secondary" />
+          </button>
+          <h1 className="text-lg font-bold text-fmax-text-main">판매 방식 선택</h1>
+       </header>
+
+       <main className="flex-grow p-4 sm:p-6 lg:p-8 flex items-center justify-center">
+          <div className="grid md:grid-cols-2 gap-6 max-w-4xl w-full">
+             {/* Auction Card */}
+             <div className="bg-white rounded-2xl border border-fmax-border p-8 hover:shadow-lg hover:border-fmax-primary transition-all cursor-pointer group relative overflow-hidden" onClick={() => onNavigate('SCR-0400', vehicleId)}>
+                <div className="w-16 h-16 rounded-2xl bg-blue-50 text-fmax-primary flex items-center justify-center mb-6 group-hover:bg-fmax-primary group-hover:text-white transition-colors">
+                   <Gavel className="w-8 h-8" />
+                </div>
+                <div className="space-y-4">
+                   <h2 className="text-2xl font-bold text-fmax-text-main">경매 (Auction)</h2>
+                   <p className="text-fmax-text-sub leading-relaxed">
+                      글로벌 바이어들의 경쟁 입찰을 통해 최고가로 판매합니다. 빠른 회전율을 보장합니다.
+                   </p>
+                   <ul className="space-y-2 pt-2">
+                      <li className="flex items-center gap-2 text-sm text-fmax-text-main"><Check className="w-4 h-4 text-fmax-primary" /> 48시간 내 판매 완료</li>
+                      <li className="flex items-center gap-2 text-sm text-fmax-text-main"><Check className="w-4 h-4 text-fmax-primary" /> 경쟁 입찰로 가격 상승 유도</li>
+                      <li className="flex items-center gap-2 text-sm text-fmax-text-main"><Check className="w-4 h-4 text-fmax-primary" /> 진행 중 입찰가 비공개 (Blind)</li>
+                   </ul>
+                </div>
+                <div className="mt-8">
+                   <Button className="w-full" icon={ArrowRight}>경매 시작하기</Button>
+                </div>
+             </div>
+
+             {/* Fixed Price Card */}
+             <div className="bg-white rounded-2xl border border-fmax-border p-8 hover:shadow-lg hover:border-fmax-primary transition-all cursor-pointer group" onClick={() => alert("Mock: Navigating to General Sale flow (SCR-0102). Feature implemented in next phase.")}>
+                <div className="w-16 h-16 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center mb-6 group-hover:bg-green-600 group-hover:text-white transition-colors">
+                   <ShoppingBag className="w-8 h-8" />
+                </div>
+                <div className="space-y-4">
+                   <h2 className="text-2xl font-bold text-fmax-text-main">일반 판매 (Fixed Price)</h2>
+                   <p className="text-fmax-text-sub leading-relaxed">
+                      원하는 가격을 설정하고 바이어의 제안을 받습니다. 가격 결정권이 딜러에게 있습니다.
+                   </p>
+                   <ul className="space-y-2 pt-2">
+                      <li className="flex items-center gap-2 text-sm text-fmax-text-main"><Check className="w-4 h-4 text-green-600" /> 희망 판매가 직접 설정</li>
+                      <li className="flex items-center gap-2 text-sm text-fmax-text-main"><Check className="w-4 h-4 text-green-600" /> 바이어 제안(Offer) 수락/거절</li>
+                      <li className="flex items-center gap-2 text-sm text-fmax-text-main"><Check className="w-4 h-4 text-green-600" /> 언제든지 경매로 전환 가능</li>
+                   </ul>
+                </div>
+                <div className="mt-8">
+                   <Button variant="outline" className="w-full" icon={ArrowRight}>일반 판매 등록</Button>
+                </div>
+             </div>
+          </div>
+       </main>
+    </div>
+  );
+};
+
+// --- SCR-0400: Auction Detail Page ---
+const AuctionDetailPage = ({ onNavigate, vehicleId }: any) => {
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+
+  useEffect(() => {
+    if (vehicleId) {
+      setVehicle(MockDataService.getVehicleById(vehicleId) || null);
+      MockDataService.startAuction(vehicleId);
+    }
+  }, [vehicleId]);
+
+  if (!vehicle) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-fmax-primary"/></div>;
+
+  return (
+    <div className="min-h-screen bg-fmax-surface flex flex-col">
+       <header className="bg-white border-b border-fmax-border sticky top-0 z-30 px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-4">
+            <button onClick={() => onNavigate('SCR-0100')} className="p-2 hover:bg-fmax-surface rounded-lg transition-colors">
+              <ArrowLeft className="w-5 h-5 text-fmax-text-secondary" />
+            </button>
+            <h1 className="text-lg font-bold text-fmax-text-main">경매 상세 (Dealer View)</h1>
+          </div>
+          <div className="flex items-center gap-2">
+             <Badge variant="neutral" className="px-3 py-1.5"><div className="w-2 h-2 rounded-full bg-red-500 mr-2 animate-pulse"></div> Live</Badge>
+          </div>
+       </header>
+
+       <main className="flex-grow p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full space-y-6">
+          {/* Status Header */}
+          <Card className="flex flex-col md:flex-row items-center justify-between gap-6 !p-8 bg-gradient-to-r from-slate-900 to-slate-800 text-white border-none">
+             <div>
+                <div className="flex items-center gap-3 mb-2">
+                   <span className="px-2.5 py-0.5 rounded bg-white/10 text-xs font-medium border border-white/10">Auction ID: #AUC-{vehicle.id}</span>
+                   <span className="px-2.5 py-0.5 rounded bg-blue-500/20 text-blue-300 text-xs font-medium border border-blue-500/30">Global Bidding</span>
+                </div>
+                <h2 className="text-2xl font-bold mb-1">{vehicle.modelYear} {vehicle.manufacturer} {vehicle.modelName}</h2>
+                <p className="text-slate-400 text-sm">{vehicle.plateNumber} · {vehicle.vin}</p>
+             </div>
+             <div className="flex items-center gap-8">
+                <div className="text-center">
+                   <p className="text-xs text-slate-400 mb-1">Time Remaining</p>
+                   <p className="text-3xl font-mono font-bold text-red-400">{vehicle.endTime || "47:59:59"}</p>
+                </div>
+                <div className="w-px h-12 bg-white/10"></div>
+                <div className="text-center">
+                   <p className="text-xs text-slate-400 mb-1">Current Bid (Blind)</p>
+                   <p className="text-3xl font-bold">비공개</p>
+                </div>
+             </div>
+          </Card>
+
+          <div className="grid md:grid-cols-3 gap-6">
+             {/* Left Column: Stats */}
+             <div className="space-y-6">
+                <Card>
+                   <h3 className="text-sm font-bold text-fmax-text-main mb-4 flex items-center gap-2"><Activity className="w-4 h-4" /> Activity Log</h3>
+                   <div className="space-y-4">
+                      <div className="flex items-start gap-3">
+                         <div className="w-2 h-2 rounded-full bg-fmax-primary mt-2"></div>
+                         <div>
+                            <p className="text-sm font-medium text-fmax-text-main">New Bid Received</p>
+                            <p className="text-xs text-fmax-text-sub">Just now · Buyer from Jordan</p>
+                         </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                         <div className="w-2 h-2 rounded-full bg-gray-300 mt-2"></div>
+                         <div>
+                            <p className="text-sm font-medium text-fmax-text-main">New Bid Received</p>
+                            <p className="text-xs text-fmax-text-sub">5 mins ago · Buyer from Russia</p>
+                         </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                         <div className="w-2 h-2 rounded-full bg-gray-300 mt-2"></div>
+                         <div>
+                            <p className="text-sm font-medium text-fmax-text-main">Auction Started</p>
+                            <p className="text-xs text-fmax-text-sub">15 mins ago</p>
+                         </div>
+                      </div>
+                   </div>
+                </Card>
+
+                <Card>
+                   <h3 className="text-sm font-bold text-fmax-text-main mb-4">Price Settings</h3>
+                   <div className="space-y-3">
+                      <div className="flex justify-between text-sm">
+                         <span className="text-fmax-text-sub">Start Price</span>
+                         <span className="font-bold text-fmax-text-main">$12,000</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                         <span className="text-fmax-text-sub">Buy Now Price</span>
+                         <span className="font-bold text-fmax-text-main">$15,500</span>
+                      </div>
+                   </div>
+                </Card>
+             </div>
+
+             {/* Right Column: Actions & Info */}
+             <div className="md:col-span-2 space-y-6">
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 flex items-start gap-4">
+                   <Megaphone className="w-6 h-6 text-fmax-primary shrink-0" />
+                   <div>
+                      <h4 className="font-bold text-fmax-text-main text-sm">딜러님, 현재 경매가 활발하게 진행 중입니다.</h4>
+                      <p className="text-xs text-fmax-text-sub mt-1 leading-relaxed">
+                         경매 진행 중에는 현재 입찰가가 비공개(Blind) 처리됩니다. 경매가 종료되면 낙찰자와 최종 낙찰가가 공개됩니다.
+                         예상보다 입찰이 저조할 경우, 일반 판매로 전환할 수 있습니다.
+                      </p>
+                   </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                   <Button variant="outline" className="h-12" onClick={() => alert("Simulating switch to General Sale (FUNC-15)")}>일반 판매로 전환</Button>
+                   <Button className="h-12" onClick={() => onNavigate('SCR-0100')}>대시보드로 이동</Button>
+                </div>
+                
+                {/* Simulation Button for Demo */}
+                <div className="border-t border-dashed border-gray-200 pt-6 mt-6">
+                   <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Demo Actions (Buyer Simulation)</p>
+                   <Button variant="secondary" className="w-full" onClick={() => { alert("Buyer clicked Buy Now! Auction Ended."); onNavigate('SCR-0100'); }}>
+                      [Demo] 바이어 즉시구매 실행 (FUNC-19)
+                   </Button>
+                </div>
+             </div>
+          </div>
+       </main>
     </div>
   );
 };
@@ -1532,6 +1761,10 @@ const ApprovalStatusPage = ({ status, onNavigate }: any) => {
             제출하신 서류를 검토하고 있습니다.<br/>
             결과는 24시간 내에 문자로 안내됩니다.
           </p>
+          {/* Added Demo Button to prevent user getting stuck */}
+          <Button variant="outline" size="sm" className="mt-6 text-xs" onClick={() => onNavigate('SCR-0003-2')}>
+             [데모용] 심사 완료 처리
+          </Button>
         </>
       ) : (
         <>
@@ -1579,6 +1812,8 @@ const App = () => {
       case 'SCR-0201': return <InspectionRequestPage onNavigate={handleNavigate} vehicleId={currentVehicleId || 'v-101'} />;
       case 'SCR-0201-Progress': return <InspectionStatusPage onNavigate={handleNavigate} />;
       case 'SCR-0202': return <InspectionReportPage onNavigate={handleNavigate} vehicleId={currentVehicleId || 'v-101'} />;
+      case 'SCR-0300': return <SalesMethodPage onNavigate={handleNavigate} vehicleId={currentVehicleId || 'v-101'} />;
+      case 'SCR-0400': return <AuctionDetailPage onNavigate={handleNavigate} vehicleId={currentVehicleId || 'v-101'} />;
       default: return <LandingPage onNavigate={handleNavigate} />;
     }
   };
