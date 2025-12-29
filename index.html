@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ForwardMax | B2B Used Car Export Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              background: '#ffffff',
+              surface: '#F8FAFC',
+              surfaceHover: '#F1F5F9',
+              primary: '#373EEF',
+              primaryHover: '#2A30C6',
+              accent: '#00B8D4',
+              text: {
+                primary: '#0F172A',
+                secondary: '#475569',
+                muted: '#94A3B8'
+              },
+              border: '#E2E8F0',
+              
+              /* New FMAX Design System Colors */
+              'fmax-bg': '#FFFFFF',
+              'fmax-surface': '#F8F9FA',
+              'fmax-border': '#E9ECEF',
+              'fmax-primary': '#373EEF',
+              'fmax-accent': '#00D8FF',
+              'fmax-text-main': '#1A233A',
+              'fmax-text-sub': '#6C757D',
+              'fmax-success': '#00B37E',
+              'fmax-error': '#E03131'
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              mono: ['JetBrains Mono', 'monospace'],
+            },
+            boxShadow: {
+              'fmax-card': '0 2px 12px rgba(0, 0, 0, 0.08)'
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        background-color: #ffffff;
+        color: #0F172A;
+        font-family: 'Inter', sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      /* Custom Scrollbar for high-density look */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #ffffff; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #CBD5E1; 
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94A3B8; 
+      }
+      
+      /* Checkbox Custom Styling */
+      .checkbox-wrapper input[type="checkbox"]:checked + div {
+        background-color: #373EEF;
+        border-color: #373EEF;
+      }
+      .checkbox-wrapper input[type="checkbox"]:checked + div svg {
+        display: block;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
